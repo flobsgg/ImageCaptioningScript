@@ -1,0 +1,15 @@
+==========================================
+   IMAGE CAPTIONING TOOL
+   for Character LoRA Training
+==========================================
+
+HOW TO USE:
+
+1. Get a free API key from:
+   https://aistudio.google.com/apikey
+
+2. Double-click "START.command"
+
+3. Follow the prompts - done!
+
+==========================================

@@ -85,21 +85,13 @@ pip install --upgrade pip --quiet
 pip install . --quiet
 deactivate
 
-# Create config file from example if it doesn't exist
-if [ ! -f "config.yaml" ] && [ -f "config.yaml.example" ]; then
-    cp config.yaml.example config.yaml
-    echo "Created config.yaml from template"
-fi
-
 echo ""
 echo "================================"
 echo "Setup complete!"
 echo "================================"
 echo ""
-echo "Next steps:"
-echo "  1. Edit config.yaml to set your preferences"
-echo "  2. Run: ./run_captioning.sh /path/to/images"
+echo "Run the tool:"
+echo "  ./run_captioning.sh"
 echo ""
-echo "For help:"
-echo "  ./run_captioning.sh --help"
+echo "The interactive wizard will guide you through the setup."
 echo ""

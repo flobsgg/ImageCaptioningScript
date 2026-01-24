@@ -7,20 +7,27 @@ Designed for character LoRA training datasets where identity features
 should be excluded from descriptions.
 """
 
+# Suppress deprecation warnings from Google libraries
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", message=".*urllib3.*")
+
 import argparse
-import getpass
 import json
 import logging
 import os
 import re
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
 import google.generativeai as genai
-import yaml
+import questionary
+from dotenv import load_dotenv, set_key
 from PIL import Image
+from questionary import Style
 from tqdm import tqdm
 
 # --- DEFAULT CONFIGURATION ---
@@ -31,6 +38,17 @@ DEFAULTS = {
     "batch_size": 8,
     "log_level": "INFO",
 }
+
+# Custom style for questionary prompts
+PROMPT_STYLE = Style([
+    ("qmark", "fg:cyan bold"),
+    ("question", "fg:white bold"),
+    ("answer", "fg:green"),
+    ("pointer", "fg:cyan bold"),
+    ("highlighted", "fg:cyan bold"),
+    ("selected", "fg:green"),
+    ("instruction", "fg:gray"),
+])
 
 # --- PROMPTS ---
 SINGLE_IMAGE_INSTRUCTION = """You are analyzing an image for a character LoRA training dataset. The goal is to describe EVERYTHING EXCEPT the character's permanent physical identity features. Your analysis must be objective, descriptive, and detailed, avoiding subjective words like 'beautiful' or 'amazing'. Provide the output as a single, continuous line of comma-separated keywords and phrases.
@@ -119,23 +137,172 @@ def setup_logging(level: str = "INFO") -> None:
     )
 
 
-def load_config(config_path: Path) -> dict[str, Any]:
-    """Load configuration from YAML file."""
-    if config_path.exists():
-        with open(config_path, encoding="utf-8") as f:
-            config = yaml.safe_load(f) or {}
-            logger.debug(f"Loaded config from {config_path}")
-            return config
-    return {}
+def get_env_path() -> Path:
+    """Get the path to the .env file in the script directory."""
+    return Path(__file__).parent / ".env"
 
 
-def get_config_value(key: str, cli_value: Any, config: dict[str, Any]) -> Any:
-    """Get config value with priority: CLI > config file > default."""
-    if cli_value is not None:
-        return cli_value
-    if key in config:
-        return config[key]
-    return DEFAULTS.get(key)
+def load_saved_settings() -> dict[str, Any]:
+    """Load settings from .env file."""
+    env_path = get_env_path()
+    settings = {}
+
+    if env_path.exists():
+        load_dotenv(env_path)
+        settings["api_key"] = os.getenv("GEMINI_API_KEY", "")
+        settings["trigger_word"] = os.getenv("TRIGGER_WORD", DEFAULTS["trigger_word"])
+        settings["style_tags"] = os.getenv("STYLE_TAGS", DEFAULTS["style_tags"])
+        settings["model"] = os.getenv("MODEL", DEFAULTS["model"])
+        settings["batch_size"] = int(os.getenv("BATCH_SIZE", str(DEFAULTS["batch_size"])))
+
+    return settings
+
+
+def save_settings(settings: dict[str, Any]) -> None:
+    """Save settings to .env file."""
+    env_path = get_env_path()
+
+    # Create .env file if it doesn't exist
+    if not env_path.exists():
+        env_path.touch()
+
+    # Save each setting
+    if settings.get("api_key"):
+        set_key(env_path, "GEMINI_API_KEY", settings["api_key"])
+    if settings.get("trigger_word"):
+        set_key(env_path, "TRIGGER_WORD", settings["trigger_word"])
+    if "style_tags" in settings:
+        set_key(env_path, "STYLE_TAGS", settings["style_tags"])
+    if settings.get("model"):
+        set_key(env_path, "MODEL", settings["model"])
+    if settings.get("batch_size"):
+        set_key(env_path, "BATCH_SIZE", str(settings["batch_size"]))
+
+
+def print_banner() -> None:
+    """Print the application banner."""
+    print()
+    print("  ┌─────────────────────────────────────┐")
+    print("  │   Image Captioning Tool             │")
+    print("  │   for Character LoRA Training       │")
+    print("  └─────────────────────────────────────┘")
+    print()
+
+
+def run_interactive_setup(saved_settings: dict[str, Any], need_directory: bool = True) -> dict[str, Any]:
+    """Run interactive setup wizard and return settings."""
+    settings = {}
+
+    # API Key
+    saved_key = saved_settings.get("api_key", "")
+    if saved_key:
+        key_preview = f"{saved_key[:4]}...{saved_key[-4:]}"
+        use_saved = questionary.confirm(
+            f"Use saved API key ({key_preview})?",
+            default=True,
+            style=PROMPT_STYLE,
+        ).ask()
+
+        if use_saved is None:  # User pressed Ctrl+C
+            sys.exit(0)
+
+        if use_saved:
+            settings["api_key"] = saved_key
+        else:
+            api_key = questionary.password(
+                "Enter your Gemini API key:",
+                style=PROMPT_STYLE,
+            ).ask()
+            if api_key is None:
+                sys.exit(0)
+            settings["api_key"] = api_key
+    else:
+        print("  Get your free API key at: https://aistudio.google.com/apikey")
+        print()
+        api_key = questionary.password(
+            "Enter your Gemini API key:",
+            style=PROMPT_STYLE,
+        ).ask()
+        if api_key is None:
+            sys.exit(0)
+        settings["api_key"] = api_key
+
+    # Trigger Word
+    saved_trigger = saved_settings.get("trigger_word", DEFAULTS["trigger_word"])
+    trigger_word = questionary.text(
+        "Trigger word for your LoRA:",
+        default=saved_trigger,
+        style=PROMPT_STYLE,
+    ).ask()
+    if trigger_word is None:
+        sys.exit(0)
+    settings["trigger_word"] = trigger_word or DEFAULTS["trigger_word"]
+
+    # Style Tags (optional)
+    saved_style = saved_settings.get("style_tags", "")
+    style_tags = questionary.text(
+        "Style tags to append (optional):",
+        default=saved_style,
+        style=PROMPT_STYLE,
+    ).ask()
+    if style_tags is None:
+        sys.exit(0)
+    settings["style_tags"] = style_tags or ""
+
+    # Model selection
+    saved_model = saved_settings.get("model", DEFAULTS["model"])
+    model = questionary.select(
+        "Select Gemini model:",
+        choices=[
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+        ],
+        default=saved_model if saved_model in [
+            "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash",
+            "gemini-1.5-pro", "gemini-1.5-flash"
+        ] else DEFAULTS["model"],
+        style=PROMPT_STYLE,
+    ).ask()
+    if model is None:
+        sys.exit(0)
+    settings["model"] = model
+
+    # Batch size
+    saved_batch = saved_settings.get("batch_size", DEFAULTS["batch_size"])
+    batch_size = questionary.select(
+        "Images per API call (batch size):",
+        choices=["4", "6", "8", "10", "12"],
+        default=str(saved_batch) if str(saved_batch) in ["4", "6", "8", "10", "12"] else "8",
+        style=PROMPT_STYLE,
+    ).ask()
+    if batch_size is None:
+        sys.exit(0)
+    settings["batch_size"] = int(batch_size)
+
+    # Image directory
+    if need_directory:
+        print()
+        print("  Tip: Drag & drop folder into terminal, or type path")
+        image_dir = questionary.text(
+            "Path to image folder:",
+            style=PROMPT_STYLE,
+        ).ask()
+        if image_dir is None:
+            sys.exit(0)
+        # Clean up path (remove quotes and trailing spaces from drag & drop)
+        image_dir = image_dir.strip().strip("'\"")
+        settings["image_directory"] = image_dir
+
+    # Save settings
+    save_settings(settings)
+    print()
+    print("  ✓ Settings saved to .env")
+    print()
+
+    return settings
 
 
 def process_single_image(
@@ -308,29 +475,6 @@ def save_batch_report(
         logger.warning(f"Could not save batch report: {e}")
 
 
-def get_api_key(api_key_arg: Optional[str], config: dict[str, Any]) -> Optional[str]:
-    """Get API key from argument, config, environment variable, or user input."""
-    if api_key_arg:
-        return api_key_arg
-
-    if "api_key" in config:
-        logger.debug("Using API key from config file")
-        return config["api_key"]
-
-    env_key = os.environ.get("GEMINI_API_KEY")
-    if env_key:
-        logger.info("Using API key from GEMINI_API_KEY environment variable")
-        return env_key
-
-    api_key = getpass.getpass("Enter your Gemini API key (input is hidden): ")
-    if api_key:
-        preview = f"{api_key[:4]}...{api_key[-4:]}"
-        logger.info(f"API key received. Preview: {preview}")
-        return api_key
-
-    return None
-
-
 def main() -> None:
     """Main function with batch processing."""
     parser = argparse.ArgumentParser(
@@ -338,13 +482,12 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s /path/to/images
-  %(prog)s /path/to/images --trigger "ohwx woman" --batch-size 4
+  %(prog)s                                    # Interactive mode
+  %(prog)s /path/to/images                    # Process with saved settings
+  %(prog)s /path/to/images --trigger "ohwx woman"
   %(prog)s /path/to/images --api-key YOUR_KEY --model gemini-2.0-flash
 
-Configuration:
-  Settings can be specified in config.yaml (copy from config.yaml.example).
-  CLI arguments override config file settings.
+Settings are saved in .env and reused automatically.
         """,
     )
 
@@ -355,7 +498,7 @@ Configuration:
     )
     parser.add_argument(
         "--api-key",
-        help="Gemini API key (or set GEMINI_API_KEY env var, or config.yaml)",
+        help="Gemini API key (or set via interactive setup / .env)",
     )
     parser.add_argument(
         "--trigger",
@@ -375,52 +518,57 @@ Configuration:
         help=f"Gemini model to use (default: {DEFAULTS['model']})",
     )
     parser.add_argument(
-        "--config",
-        type=Path,
-        default=Path("config.yaml"),
-        help="Path to config file (default: config.yaml)",
-    )
-    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
         help="Logging level (default: INFO)",
     )
 
     args = parser.parse_args()
 
-    # Load config file
-    script_dir = Path(__file__).parent
-    config_path = args.config if args.config.is_absolute() else script_dir / args.config
-    config = load_config(config_path)
-
     # Setup logging
-    log_level = get_config_value("log_level", args.log_level, config)
-    setup_logging(log_level)
+    setup_logging(args.log_level)
 
-    # Get configuration values with priority: CLI > config > defaults
-    trigger_word = get_config_value("trigger_word", args.trigger, config)
-    style_tags = get_config_value("style_tags", args.style_tags, config) or ""
-    batch_size = get_config_value("batch_size", args.batch_size, config)
-    model_name = get_config_value("model", args.model, config)
+    # Load saved settings from .env
+    saved_settings = load_saved_settings()
 
-    # Get image directory
-    if args.image_directory:
-        image_directory = args.image_directory
+    # Determine if we need interactive mode
+    has_api_key = args.api_key or saved_settings.get("api_key")
+    has_directory = args.image_directory is not None
+
+    # If no API key available, or no arguments at all -> interactive mode
+    if not has_api_key or (not has_directory and len(sys.argv) == 1):
+        print_banner()
+        settings = run_interactive_setup(saved_settings, need_directory=not has_directory)
+
+        # Merge CLI args over interactive settings
+        api_key = args.api_key or settings.get("api_key")
+        trigger_word = args.trigger or settings.get("trigger_word", DEFAULTS["trigger_word"])
+        style_tags = args.style_tags if args.style_tags is not None else settings.get("style_tags", "")
+        batch_size = args.batch_size or settings.get("batch_size", DEFAULTS["batch_size"])
+        model_name = args.model or settings.get("model", DEFAULTS["model"])
+        image_directory = args.image_directory or settings.get("image_directory")
     else:
-        image_directory = input("Enter the path to the image directory: ").strip()
-        if not image_directory:
-            logger.error("Image directory path is required")
-            return
+        # Use CLI args with saved settings as fallback
+        api_key = args.api_key or saved_settings.get("api_key")
+        trigger_word = args.trigger or saved_settings.get("trigger_word", DEFAULTS["trigger_word"])
+        style_tags = args.style_tags if args.style_tags is not None else saved_settings.get("style_tags", "")
+        batch_size = args.batch_size or saved_settings.get("batch_size", DEFAULTS["batch_size"])
+        model_name = args.model or saved_settings.get("model", DEFAULTS["model"])
+        image_directory = args.image_directory
+
+    # Validate required values
+    if not api_key:
+        logger.error("API key is required. Run without arguments for interactive setup.")
+        return
+
+    if not image_directory:
+        logger.error("Image directory is required.")
+        return
 
     # Validate directory
     if not Path(image_directory).is_dir():
         logger.error(f"'{image_directory}' is not a valid directory")
-        return
-
-    # Get API key
-    api_key = get_api_key(args.api_key, config)
-    if not api_key:
-        logger.error("API key is required")
         return
 
     logger.info(f"Starting batch captioning with {model_name}")

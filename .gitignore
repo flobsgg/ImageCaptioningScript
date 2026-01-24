@@ -26,9 +26,7 @@ Thumbs.db
 # Project specific
 *_data/
 *.txt
+!HOW?TO?START.txt
 
-# Config (may contain API keys)
-config.yaml
-
-# Environment variables
+# Environment variables (contains API key)
 .env
