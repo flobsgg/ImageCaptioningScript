@@ -19,7 +19,6 @@ import os
 import re
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -387,94 +386,6 @@ def process_batch_images(
         return {path: None for path in image_paths}
 
 
-def save_batch_report(
-    dataset_path: str,
-    total_images: int,
-    processed_count: int,
-    skipped_count: int,
-    api_calls_made: int,
-    single_fallback_count: int,
-    batch_size: int,
-    start_time: datetime,
-    model_name: str,
-    trigger_word: str,
-    style_tags: str,
-) -> None:
-    """Save detailed batch processing report to data folder."""
-    try:
-        dataset_path_obj = Path(dataset_path)
-        dataset_name = dataset_path_obj.name
-        parent_dir = dataset_path_obj.parent
-        data_folder = parent_dir / f"{dataset_name}_data"
-
-        data_folder.mkdir(parents=True, exist_ok=True)
-
-        timestamp = datetime.now().strftime("%y%m%d_%H%M")
-        report_filename = f"{timestamp}_{dataset_name}_Batch_Processing_Report.txt"
-        report_path = data_folder / report_filename
-
-        end_time = datetime.now()
-        processing_time = end_time - start_time
-        estimated_single_calls = processed_count + single_fallback_count
-        api_savings = max(0, estimated_single_calls - api_calls_made)
-        efficiency = (
-            (processed_count - single_fallback_count) / api_calls_made if api_calls_made > 0 else 0
-        )
-        batch_success_rate = (
-            (api_calls_made - single_fallback_count) / api_calls_made * 100
-            if api_calls_made > 0
-            else 0
-        )
-
-        with open(report_path, "w", encoding="utf-8") as f:
-            f.write("Batch Caption Generation Report\n")
-            f.write("=" * 35 + "\n\n")
-            f.write(f"Generated: {end_time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Dataset: {dataset_name}\n")
-            f.write(f"Source Path: {dataset_path}\n")
-            f.write(f"Processing Time: {processing_time}\n\n")
-
-            f.write("Processing Configuration:\n")
-            f.write(f"  Batch Size: {batch_size} images per API call\n")
-            f.write(f"  Model: {model_name}\n\n")
-
-            f.write("Processing Results:\n")
-            f.write(f"  Total Images Found: {total_images}\n")
-            f.write(f"  Images Skipped (already processed): {skipped_count}\n")
-            f.write(f"  Images to Process: {processed_count + single_fallback_count}\n")
-            f.write(f"  Images Successfully Processed: {processed_count}\n\n")
-
-            f.write("API Usage Statistics:\n")
-            f.write(f"  Total API Calls Made: {api_calls_made}\n")
-            f.write(f"  Batch Processing Calls: {api_calls_made - single_fallback_count}\n")
-            f.write(f"  Single Image Fallback Calls: {single_fallback_count}\n")
-            f.write(f"  Estimated Single-Image Processing: {estimated_single_calls} calls\n")
-            savings_pct = (
-                (api_savings / estimated_single_calls * 100) if estimated_single_calls > 0 else 0
-            )
-            f.write(f"  API Calls Saved: {api_savings} ({savings_pct:.1f}% reduction)\n\n")
-
-            f.write("Efficiency Metrics:\n")
-            f.write(f"  Batch Success Rate: {batch_success_rate:.1f}%\n")
-            f.write(f"  Average Images per API Call: {efficiency:.1f}\n")
-            rate = (
-                processed_count / processing_time.total_seconds() * 60
-                if processing_time.total_seconds() > 0
-                else 0
-            )
-            f.write(f"  Processing Rate: {rate:.1f} images/minute\n\n")
-
-            f.write("Quality Assurance:\n")
-            f.write(f"  Trigger Word: {trigger_word}\n")
-            f.write(f"  Style Tags: {style_tags}\n")
-            f.write("  Fallback Strategy: Single-image processing for failed batches\n")
-
-        logger.info(f"Report saved to {report_path}")
-
-    except Exception as e:
-        logger.warning(f"Could not save batch report: {e}")
-
-
 def main() -> None:
     """Main function with batch processing."""
     parser = argparse.ArgumentParser(
@@ -575,8 +486,6 @@ Settings are saved in .env and reused automatically.
     logger.info(f"Trigger word: {trigger_word}")
     if style_tags:
         logger.info(f"Style tags: {style_tags}")
-
-    start_time = datetime.now()
 
     try:
         genai.configure(api_key=api_key)
@@ -685,20 +594,6 @@ Settings are saved in .env and reused automatically.
             logger.warning(f"  - {name}")
         if len(failed_images) > 5:
             logger.warning(f"  ... and {len(failed_images) - 5} more")
-
-    save_batch_report(
-        dataset_path=image_directory,
-        total_images=len(image_paths),
-        processed_count=processed_count,
-        skipped_count=skipped_count,
-        api_calls_made=api_calls_made,
-        single_fallback_count=single_fallback_count,
-        batch_size=batch_size,
-        start_time=start_time,
-        model_name=model_name,
-        trigger_word=trigger_word,
-        style_tags=style_tags,
-    )
 
 
 if __name__ == "__main__":
