@@ -66,6 +66,7 @@ SINGLE_IMAGE_INSTRUCTION = """You are analyzing an image for a character LoRA tr
 4.  **Pose & Action:** Body position, gestures, activities (e.g., `standing with arms crossed`, `sitting on chair`, `walking`, `hands in pockets`, `looking over shoulder`)
 5.  **Background & Environment:** Location, setting, surroundings (e.g., `outdoor park`, `urban street`, `modern office`, `blurred background`, `brick wall behind`)
 6.  **Lighting & Atmosphere:** Light direction, quality, mood (e.g., `natural daylight`, `dramatic side lighting`, `soft shadows`, `golden hour lighting`, `high contrast`)
+7.  **Focus & Depth of Field:** Background sharpness, bokeh quality (e.g., `sharp background`, `shallow depth of field`, `blurred background with bokeh`, `everything in focus`, `soft background blur`)
 
 **Output Structure (follow this order precisely):**
 1.  **Shot Type & Composition:** Camera angle and framing
@@ -74,9 +75,10 @@ SINGLE_IMAGE_INSTRUCTION = """You are analyzing an image for a character LoRA tr
 4.  **Pose & Action:** Body position and activity
 5.  **Environment & Background:** Location and setting
 6.  **Lighting & Atmosphere:** Light quality and mood
+7.  **Focus & Depth of Field:** Background sharpness and blur
 
 **Example Output:**
-close-up shot, wearing white t-shirt and denim jacket, smiling warmly, standing with hands in pockets, outdoor urban setting with graffiti wall, natural daylight with soft shadows"""
+close-up shot, wearing white t-shirt and denim jacket, smiling warmly, standing with hands in pockets, outdoor urban setting with graffiti wall, natural daylight with soft shadows, sharp background with everything in focus"""
 
 BATCH_INSTRUCTION = """You are analyzing multiple images for a character LoRA training dataset. The goal is to describe EVERYTHING EXCEPT the character's permanent physical identity features. You will analyze multiple images and provide individual detailed descriptions for each one.
 
@@ -102,6 +104,7 @@ BATCH_INSTRUCTION = """You are analyzing multiple images for a character LoRA tr
 4.  **Pose & Action:** Body position, gestures, activities (e.g., `standing with arms crossed`, `sitting on chair`, `walking`, `hands in pockets`, `looking over shoulder`)
 5.  **Background & Environment:** Location, setting, surroundings (e.g., `outdoor park`, `urban street`, `modern office`, `blurred background`, `brick wall behind`)
 6.  **Lighting & Atmosphere:** Light direction, quality, mood (e.g., `natural daylight`, `dramatic side lighting`, `soft shadows`, `golden hour lighting`, `high contrast`)
+7.  **Focus & Depth of Field:** Background sharpness, bokeh quality (e.g., `sharp background`, `shallow depth of field`, `blurred background with bokeh`, `everything in focus`, `soft background blur`)
 
 **Output Structure (follow this order precisely for each image):**
 1.  **Shot Type & Composition:** Camera angle and framing
@@ -110,14 +113,15 @@ BATCH_INSTRUCTION = """You are analyzing multiple images for a character LoRA tr
 4.  **Pose & Action:** Body position and activity
 5.  **Environment & Background:** Location and setting
 6.  **Lighting & Atmosphere:** Light quality and mood
+7.  **Focus & Depth of Field:** Background sharpness and blur
 
 **OUTPUT FORMAT:**
 Return a JSON object where each key is the image filename and each value is the detailed description:
 
 {
-  "image1.jpg": "close-up shot, wearing white t-shirt and denim jacket, smiling warmly, standing with hands in pockets, outdoor urban setting with graffiti wall, natural daylight with soft shadows",
-  "image2.jpg": "medium shot, wearing black suit and tie, serious expression, sitting at desk, modern office interior, soft overhead lighting",
-  "image3.jpg": "wide angle shot, wearing casual hoodie and jeans, laughing, walking on sidewalk, city street background, golden hour lighting"
+  "image1.jpg": "close-up shot, wearing white t-shirt and denim jacket, smiling warmly, standing with hands in pockets, outdoor urban setting with graffiti wall, natural daylight with soft shadows, sharp background with everything in focus",
+  "image2.jpg": "medium shot, wearing black suit and tie, serious expression, sitting at desk, modern office interior, soft overhead lighting, shallow depth of field with blurred background",
+  "image3.jpg": "wide angle shot, wearing casual hoodie and jeans, laughing, walking on sidewalk, city street background, golden hour lighting, deep depth of field with sharp background"
 }
 
 IMPORTANT: Each description must be complete and detailed as if analyzing only that single image. Do not reference or compare to other images in the batch."""
