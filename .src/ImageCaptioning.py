@@ -50,7 +50,7 @@ PROMPT_STYLE = Style([
 ])
 
 # --- PROMPTS ---
-SINGLE_IMAGE_INSTRUCTION = """You are analyzing an image for a character LoRA training dataset. The goal is to describe EVERYTHING EXCEPT the character's permanent physical identity features. Your analysis must be objective, descriptive, and detailed, avoiding subjective words like 'beautiful' or 'amazing'. Provide the output as a single, continuous line of comma-separated keywords and phrases.
+SINGLE_IMAGE_INSTRUCTION = """You are analyzing an image for a character LoRA training dataset. The goal is to describe EVERYTHING EXCEPT the character's permanent physical identity features. Your analysis must be objective, descriptive, and detailed, avoiding subjective words like 'beautiful' or 'amazing'. Write concise, objective, and descriptive sentences.
 
 **CRITICAL RULES - DO NOT DESCRIBE:**
 1.  **Hair:** Do not mention hair color, style, length, or texture
@@ -59,14 +59,17 @@ SINGLE_IMAGE_INSTRUCTION = """You are analyzing an image for a character LoRA tr
 4.  **Facial Features:** Do not describe facial structure, bone structure, nose, lips, ears, or any permanent facial characteristics
 5.  **Body Type:** Do not describe height, build, or body proportions
 
+**SUBJECT REFERENCE:**
+Refer to the subject using gendered terms with an age descriptor (e.g., "a young woman", "a middle-aged man", "an elderly woman"). Use appropriate pronouns (she/her or he/his) throughout the description. Do NOT use neutral terms like "the subject", "the person", or "they".
+
 **ALWAYS DESCRIBE:**
-1.  **Camera & Composition:** Shot type, angle, framing (e.g., `close-up shot`, `wide angle`, `low angle view`, `over-the-shoulder`)
-2.  **Clothing & Accessories:** All clothing items, jewelry, watches, hats, glasses, bags, etc. (e.g., `wearing black leather jacket`, `blue jeans`, `silver necklace`, `aviator sunglasses`)
-3.  **Facial Expression & Emotion:** Current emotion, mood, expression (e.g., `smiling`, `serious expression`, `laughing`, `looking concerned`, `neutral expression`)
-4.  **Pose & Action:** Body position, gestures, activities (e.g., `standing with arms crossed`, `sitting on chair`, `walking`, `hands in pockets`, `looking over shoulder`)
-5.  **Background & Environment:** Location, setting, surroundings (e.g., `outdoor park`, `urban street`, `modern office`, `blurred background`, `brick wall behind`)
-6.  **Lighting & Atmosphere:** Light direction, quality, mood (e.g., `natural daylight`, `dramatic side lighting`, `soft shadows`, `golden hour lighting`, `high contrast`)
-7.  **Focus & Depth of Field:** Background sharpness, bokeh quality (e.g., `sharp background`, `shallow depth of field`, `blurred background with bokeh`, `everything in focus`, `soft background blur`)
+1.  **Camera & Composition:** Shot type, angle, framing (e.g., "A close-up shot of a young woman framed from the shoulders up", "A wide-angle view of an older man from a low angle")
+2.  **Clothing & Accessories:** All clothing items, jewelry, watches, hats, glasses, bags, etc. (e.g., "She wears a black leather jacket over a white t-shirt", "He has aviator sunglasses and a silver necklace")
+3.  **Facial Expression & Emotion:** Current emotion, mood, expression (e.g., "Her expression is warm and relaxed, with a gentle smile", "He appears focused and serious")
+4.  **Pose & Action:** Body position, gestures, activities (e.g., "She stands with arms crossed and weight shifted to one side", "He is seated at a desk, leaning forward")
+5.  **Background & Environment:** Location, setting, surroundings (e.g., "The background shows an urban street with graffiti-covered walls", "A modern office interior is visible behind her")
+6.  **Lighting & Atmosphere:** Light direction, quality, mood (e.g., "Natural daylight illuminates the scene from the left, creating soft shadows", "Dramatic side lighting produces high contrast")
+7.  **Focus & Depth of Field:** Background sharpness, bokeh quality (e.g., "The background is softly blurred with pleasant bokeh", "Everything remains sharp and in focus throughout the frame")
 
 **Output Structure (follow this order precisely):**
 1.  **Shot Type & Composition:** Camera angle and framing
@@ -78,7 +81,7 @@ SINGLE_IMAGE_INSTRUCTION = """You are analyzing an image for a character LoRA tr
 7.  **Focus & Depth of Field:** Background sharpness and blur
 
 **Example Output:**
-close-up shot, wearing white t-shirt and denim jacket, smiling warmly, standing with hands in pockets, outdoor urban setting with graffiti wall, natural daylight with soft shadows, sharp background with everything in focus"""
+A close-up shot frames a young man from the shoulders up. He wears a white t-shirt layered under a denim jacket. His expression is warm and friendly, with a relaxed smile. He stands casually with hands tucked into his pockets. The background features an urban setting with a colorful graffiti wall. Natural daylight creates soft, even shadows across the scene. The background remains sharp and fully in focus."""
 
 BATCH_INSTRUCTION = """You are analyzing multiple images for a character LoRA training dataset. The goal is to describe EVERYTHING EXCEPT the character's permanent physical identity features. You will analyze multiple images and provide individual detailed descriptions for each one.
 
@@ -88,7 +91,7 @@ BATCH_INSTRUCTION = """You are analyzing multiple images for a character LoRA tr
 3. Output must be valid JSON with image filenames as keys
 4. Each description must be objective, descriptive, and detailed
 5. Avoid subjective words like 'beautiful' or 'amazing'
-6. Each description should be a single, continuous line of comma-separated keywords and phrases
+6. Each description should be written as concise, objective, and descriptive sentences
 
 **CRITICAL RULES - DO NOT DESCRIBE:**
 1.  **Hair:** Do not mention hair color, style, length, or texture
@@ -97,14 +100,17 @@ BATCH_INSTRUCTION = """You are analyzing multiple images for a character LoRA tr
 4.  **Facial Features:** Do not describe facial structure, bone structure, nose, lips, ears, or any permanent facial characteristics
 5.  **Body Type:** Do not describe height, build, or body proportions
 
+**SUBJECT REFERENCE:**
+Refer to the subject using gendered terms with an age descriptor (e.g., "a young woman", "a middle-aged man", "an elderly woman"). Use appropriate pronouns (she/her or he/his) throughout the description. Do NOT use neutral terms like "the subject", "the person", or "they".
+
 **ALWAYS DESCRIBE (for each image individually):**
-1.  **Camera & Composition:** Shot type, angle, framing (e.g., `close-up shot`, `wide angle`, `low angle view`, `over-the-shoulder`)
-2.  **Clothing & Accessories:** All clothing items, jewelry, watches, hats, glasses, bags, etc. (e.g., `wearing black leather jacket`, `blue jeans`, `silver necklace`, `aviator sunglasses`)
-3.  **Facial Expression & Emotion:** Current emotion, mood, expression (e.g., `smiling`, `serious expression`, `laughing`, `looking concerned`, `neutral expression`)
-4.  **Pose & Action:** Body position, gestures, activities (e.g., `standing with arms crossed`, `sitting on chair`, `walking`, `hands in pockets`, `looking over shoulder`)
-5.  **Background & Environment:** Location, setting, surroundings (e.g., `outdoor park`, `urban street`, `modern office`, `blurred background`, `brick wall behind`)
-6.  **Lighting & Atmosphere:** Light direction, quality, mood (e.g., `natural daylight`, `dramatic side lighting`, `soft shadows`, `golden hour lighting`, `high contrast`)
-7.  **Focus & Depth of Field:** Background sharpness, bokeh quality (e.g., `sharp background`, `shallow depth of field`, `blurred background with bokeh`, `everything in focus`, `soft background blur`)
+1.  **Camera & Composition:** Shot type, angle, framing (e.g., "A close-up shot of a young woman framed from the shoulders up", "A wide-angle view of an older man from a low angle")
+2.  **Clothing & Accessories:** All clothing items, jewelry, watches, hats, glasses, bags, etc. (e.g., "She wears a black leather jacket over a white t-shirt", "He has aviator sunglasses and a silver necklace")
+3.  **Facial Expression & Emotion:** Current emotion, mood, expression (e.g., "Her expression is warm and relaxed, with a gentle smile", "He appears focused and serious")
+4.  **Pose & Action:** Body position, gestures, activities (e.g., "She stands with arms crossed and weight shifted to one side", "He is seated at a desk, leaning forward")
+5.  **Background & Environment:** Location, setting, surroundings (e.g., "The background shows an urban street with graffiti-covered walls", "A modern office interior is visible behind her")
+6.  **Lighting & Atmosphere:** Light direction, quality, mood (e.g., "Natural daylight illuminates the scene from the left, creating soft shadows", "Dramatic side lighting produces high contrast")
+7.  **Focus & Depth of Field:** Background sharpness, bokeh quality (e.g., "The background is softly blurred with pleasant bokeh", "Everything remains sharp and in focus throughout the frame")
 
 **Output Structure (follow this order precisely for each image):**
 1.  **Shot Type & Composition:** Camera angle and framing
@@ -119,9 +125,9 @@ BATCH_INSTRUCTION = """You are analyzing multiple images for a character LoRA tr
 Return a JSON object where each key is the image filename and each value is the detailed description:
 
 {
-  "image1.jpg": "close-up shot, wearing white t-shirt and denim jacket, smiling warmly, standing with hands in pockets, outdoor urban setting with graffiti wall, natural daylight with soft shadows, sharp background with everything in focus",
-  "image2.jpg": "medium shot, wearing black suit and tie, serious expression, sitting at desk, modern office interior, soft overhead lighting, shallow depth of field with blurred background",
-  "image3.jpg": "wide angle shot, wearing casual hoodie and jeans, laughing, walking on sidewalk, city street background, golden hour lighting, deep depth of field with sharp background"
+  "image1.jpg": "A close-up shot frames a young man from the shoulders up. He wears a white t-shirt layered under a denim jacket. His expression is warm and friendly, with a relaxed smile. He stands casually with hands tucked into his pockets. The background features an urban setting with a colorful graffiti wall. Natural daylight creates soft, even shadows across the scene. The background remains sharp and fully in focus.",
+  "image2.jpg": "A medium shot captures a middle-aged woman from the waist up. She wears a tailored black suit with a matching tie. Her expression is serious and focused. She sits at a wooden desk, leaning slightly forward. A modern office interior with glass partitions is visible behind her. Soft overhead lighting provides even illumination. The background is gently blurred with a shallow depth of field.",
+  "image3.jpg": "A wide-angle shot shows the full figure of an older man. He wears a casual grey hoodie and dark jeans. He is laughing openly with genuine amusement. He walks along a city sidewalk mid-stride. The background reveals a busy urban street with storefronts. Golden hour lighting casts warm tones and long shadows. The entire scene remains sharp with a deep depth of field."
 }
 
 IMPORTANT: Each description must be complete and detailed as if analyzing only that single image. Do not reference or compare to other images in the batch."""
